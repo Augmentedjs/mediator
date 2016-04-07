@@ -7,12 +7,12 @@ require.config({
 		'backbone': 'lib/backbone-min',
 
         // hosted version
-		'augmented': '/augmented/scripts/core/augmented',
-        'augmentedPresentation': '/augmented/scripts/presentation/augmentedPresentation',
+		//'augmented': '/augmented/scripts/core/augmented',
+        //'augmentedPresentation': '/augmented/scripts/presentation/augmentedPresentation',
 
         // local version
-		//'augmented': 'lib/augmented',
-        //'augmentedPresentation': 'lib/augmentedPresentation'
+		'augmented': 'lib/augmented',
+        'augmentedPresentation': 'lib/augmentedPresentation',
 
         //fun stuff
         'pnglib': 'lib/pnglib',
@@ -80,7 +80,6 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
     var MyMediator = Augmented.Presentation.Mediator.extend({
         el: "#mediator",
         names: [],
-        dance: false,
         init: function(options) {
             this.on('observe',
                 function(data) {
@@ -92,7 +91,7 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
                     this.publish("control", "observed", data.button);
                     this.publish("colleagues", "observed", data.view.name);
                     this.names.push(data.view.name);
-                    this.updateNames();
+                    this.render();
                 }
             );
             this.on('dismiss',
@@ -107,7 +106,7 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
                     var index = this.names.indexOf(data.view.name);
                     if (index > -1) {
                         this.names.splice(index, 1);
-                        this.updateNames();
+                        this.render();
                     }
                 }
             );
@@ -119,16 +118,8 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
             );
         },
         render: function() {
-            if (this.el) {
-                var e = Augmented.isString(this.el) ? document.querySelector(this.el) : this.el;
-                if (e) {
-                    e.innerHTML = "<h1>Mediator</h1><p id=\"names\">Observing: " +
-                        ((this.names.length > 0) ? this.names : "Nobody") + "</p>";
-                }
-            }
-        },
-        updateNames: function() {
-            this.render();
+            Augmented.Presentation.Dom.setValue(this.el, "<h1>Mediator</h1><p id=\"names\">Observing: " +
+                ((this.names.length > 0) ? this.names : "Nobody") + "</p>");
         }
     });
 
@@ -143,7 +134,6 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
             this.on('dance', this.dance);
             this.on('observed', this.observed);
             this.on('dismissed', this.dismissed);
-
         },
         observed: function(name) {
             if (this.name === name) {
@@ -166,19 +156,15 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
             }
         },
         render: function() {
-            if (this.el) {
-                var e = Augmented.isString(this.el) ? document.querySelector(this.el) : this.el;
-                if (e) {
-                    e.innerHTML = "<div class=\"listen\"></div><img src=\"data:image/png;base64," + this.template + "\"><p>" + this.name + "</p>";
-                }
-            }
+            Augmented.Presentation.Dom.setValue(this.el,
+                "<div class=\"listen\"></div><img src=\"data:image/png;base64," + this.template + "\"><p>" + this.name + "</p>");
         }
     });
 
     var options = {
-        background: [0, 0, 0, 0],   // rgba trans
-        margin: 0,                // 20% margin
-        size: 128                    // 64px square
+        background: [0, 0, 0, 0], // rgba trans
+        margin: 0,                // no margin
+        size: 128                 // 128px square
     };
 
     var min = 0, max = names.length;
@@ -274,12 +260,7 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
             );
         },
         render: function() {
-            if (this.el) {
-                var e = Augmented.isString(this.el) ? document.querySelector(this.el) : this.el;
-                if (e) {
-                    e.innerHTML = this.template;
-                }
-            }
+            Augmented.Presentation.Dom.setValue(this.el, this.template);
         }
     });
     var cpView = new ControlPanel();

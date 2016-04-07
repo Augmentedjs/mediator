@@ -260,6 +260,12 @@
         return Augmented.isFunction(value) ? value.call(object) : value;
     };
 
+    // Polyfill for ES6 function
+    if (!Number.isInteger) {
+        Number.isInteger = function(value) {
+            return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
+        };
+    }
 
     if (!Array.prototype.includes) {
         /**
@@ -309,6 +315,23 @@
      */
     Array.prototype.has = function(key) {
         return (this.indexOf(key) !== -1);
+    };
+
+    /**
+     * exec method - Execute a function by name
+     * @method exec
+     * @param {string} functionName The name of the function
+     * @param {object} context The context to call from
+     * @param (object) args Arguments
+     */
+    Augmented.exec = function(functionName, context /*, args */) {
+        var args = Array.prototype.slice.call(arguments, 2);
+        var namespaces = functionName.split(".");
+        var func = namespaces.pop();
+        for (var i = 0; i < namespaces.length; i++) {
+            context = context[namespaces[i]];
+        }
+        return context[func].apply(context, args);
     };
 
     /**
@@ -1615,8 +1638,9 @@
     			if (showVariables) {
     			    result += varSpec.name + "=";
     			}
-                var j=0, l = value.length;
-    			for (var j = 0; j < l; j++) {
+                var j = 0;
+                l = value.length;
+    			for (j = 0; j < l; j++) {
     			    if (j > 0) {
     				result += varSpec.suffices['*'] ? (separator || ",") : ",";
     				if (varSpec.suffices['*'] && showVariables) {
@@ -4415,7 +4439,7 @@
                 Augmented.Utility.extend(this.queue, arguments);
             }
             var args = this.queue;
-            var l = args.length;
+            var l = Object.keys(args).length;//args.length;
             if (l <= 0) {
                 return false;
             }

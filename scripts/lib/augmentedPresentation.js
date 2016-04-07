@@ -204,6 +204,15 @@
          * @private
          */
     	defaultChannel: "augmentedChannel",
+
+        /**
+         * Default identifer Property
+         * @property {string} defaultIdentifier The default identifer for the view
+         * @memberof Augmented.Presentation.Mediator
+         * @private
+         */
+        defaultIdentifier: "augmentedIdentifier",
+
         /**
          * Channels Property
          * @property {string} channels The channels for the view
@@ -211,42 +220,84 @@
          * @private
          */
         channels: {},
+
     	/**
     	 * Observe a Colleague View - observe a Colleague and add to a channel
     	 * @method observeColleague
     	 * @param {Augmented.Presentation.Colleague} colleague The Colleague to observe
     	 * @param {function} callback The callback to call for this colleague
     	 * @param {string} channel The Channel to add the pubished events to
+         * @param {string} identifier The identifier for this function
          * @memberof Augmented.Presentation.Mediator
     	 */
-    	observeColleague: function(colleague, callback, channel) {
+    	observeColleague: function(colleague, callback, channel, identifier) {
     	    if (colleague instanceof Augmented.Presentation.Colleague) {
         		if (!channel) {
         		    channel = this.defaultChannel;
         		}
                 colleague.setMediatorMessageQueue(this);
 
-        		this.subscribe(channel, callback, colleague, false);
+        		this.subscribe(channel, callback, colleague, false, (identifier) ? identifier : this.defaultIdentifier);
     	    }
     	},
+
+        /**
+    	 * Observe a Colleague View - observe a Colleague and add to a channel and auto trigger events
+    	 * @method observeColleague
+    	 * @param {Augmented.Presentation.Colleague} colleague The Colleague to observe
+    	 * @param {string} channel The Channel to add the pubished events to
+         * @param {string} identifier The identifier for this function
+         * @memberof Augmented.Presentation.Mediator
+    	 */
+        observeColleagueAndTrigger: function(colleague, channel, identifier) {
+            this.observeColleague(
+                colleague,
+                function() {
+                    colleague.trigger(arguments[0], arguments[1]);
+                },
+                channel,
+                (identifier) ? identifier : this.defaultIdentifier
+            );
+        },
 
     	/**
     	 * Dismiss a Colleague View - Remove a Colleague from the channel
          * @method dismissColleague
          * @param {Augmented.Presentation.Colleague} colleague The Colleague to observe
+         * @param {function} callback The callback to call on channel event
     	 * @param {string} channel The Channel events are pubished to
+         * @param {string} identifier The identifier for this function
          * @memberof Augmented.Presentation.Mediator
     	 */
-    	dismissColleague: function(colleague, channel) {
+    	dismissColleague: function(colleague, callback, channel, identifier) {
     	    if (colleague instanceof Augmented.Presentation.Colleague) {
         		if (!channel) {
         		    channel = this.defaultChannel;
         		}
                 colleague.removeMediatorMessageQueue();
-
-        		this.unsubscribe(channel, callback, colleague);
+        		this.unsubscribe(channel, callback, colleague, (identifier) ? identifier : this.defaultIdentifier);
     	    }
     	},
+
+        /**
+    	 * Dismiss a Colleague View - Remove a Colleague from the channel that has an auto trigger
+         * @method dismissColleagueTrigger
+         * @param {Augmented.Presentation.Colleague} colleague The Colleague to observe
+    	 * @param {string} channel The Channel events are pubished to
+         * @param {string} identifier The identifier for this function
+         * @memberof Augmented.Presentation.Mediator
+    	 */
+        dismissColleagueTrigger: function(colleague, channel, identifier) {
+            var id = (identifier) ? identifier : this.defaultIdentifier;
+            this.dismissColleague(
+                colleague,
+                function() {
+                    colleague.trigger(arguments[0], arguments[1]);
+                },
+                channel,
+                id
+            );
+        },
 
     	/**
     	 * Subscribe to a channel
@@ -255,16 +306,18 @@
     	 * @param {function} callback The callback to call on channel event
     	 * @param {object} context The context (or 'this')
     	 * @param {boolean} once Toggle to set subscribe only once
+         * @param {string} identifier The identifier for this function
          * @memberof Augmented.Presentation.Mediator
     	 */
-    	subscribe: function(channel, callback, context, once) {
+    	subscribe: function(channel, callback, context, once, identifier) {
     	    if (!this.channels[channel]) {
         		this.channels[channel] = [];
             }
         	this.channels[channel].push({
-        		fn : callback,
-        		context : context || this,
-        		once : once
+        		fn: callback,
+        		context: context || this,
+        		once: once,
+                identifier: (identifier) ? identifier : this.defaultIdentifier
     	    });
 
             this.on(channel, this.publish, context);
@@ -278,19 +331,26 @@
          * @memberof Augmented.Presentation.Mediator
     	 */
     	publish: function(channel) {
-    	    if (!this.channels[channel])
-    		return;
+    	    if (!this.channels[channel]) {
+    		    return;
+            }
 
     	    var args = [].slice.call(arguments, 1), subscription;
             var i = 0, l = this.channels[channel].length;
 
     	    for (i = 0; i < l; i++) {
         		subscription = this.channels[channel][i];
-        		subscription.fn.apply(subscription.context, args);
-        		if (subscription.once) {
-        		    this.unsubscribe(channel, subscription.fn, subscription.context);
-        		    i--;
-        		}
+                if (subscription) {
+                    if (subscription.fn) {
+            		    subscription.fn.apply(subscription.context, args);
+                    }
+            		if (subscription.once) {
+            		    this.unsubscribe(channel, subscription.fn, subscription.context, subscription.identifier);
+            		    i--;
+            		}
+                } else {
+                    logger.warn("AUGMENTED: Mediator: No subscription for channel '" + channel + "' on row " + i);
+                }
     	    }
     	},
 
@@ -298,22 +358,32 @@
     	 * Cancel subscription
     	 * @method unsubscribe
     	 * @param {string} channel The Channel events are pubished to
-    	 * @param {fuction} callback The function callback regestered
+    	 * @param {function} callback The function callback regestered
     	 * @param {object} context The context (or 'this')
+         * @param {string} identifier The identifier for this function
          * @memberof Augmented.Presentation.Mediator
     	 */
-    	unsubscribe: function(channel, callback, context) {
+    	unsubscribe: function(channel, callback, context, identifier) {
     	    if (!this.channels[channel]) {
     		    return;
     	    }
 
+            var id = (identifier) ? identifier : this.defaultIdentifier;
+
     	    var subscription, i = 0, l = this.channels[channel].length;
     	    for (i = 0; i < l; i++) {
-        		subscription = this.channels[channel][i];
-        		if (subscription.fn === fn && subscription.context === context) {
-        		    this.channels[channel].splice(i, 1);
-        		    i--;
-        		}
+                subscription = this.channels[channel][i];
+                if (subscription) {
+                    if (subscription.identifier === id && subscription.context === context) {
+                    // originally compared function callbacks, but wwe don't alsways pass one so use identifier
+            		//if (subscription.fn === callback && subscription.context === context) {
+            		    this.channels[channel].splice(i, 1);
+            		    i--;
+            		}
+                } else {
+                    logger.warn("AUGMENTED: Mediator: No subscription for channel '" + channel + "' on row " + i);
+                    logger.debug("AUGMENTED: Mediator: subscription " + this.channels[channel]);
+                }
     	    }
     	},
 
@@ -323,10 +393,11 @@
     	 * @param {string} channel The Channel events are pubished to
     	 * @param {string} subscription The subscription to subscribe to
     	 * @param {object} context The context (or 'this')
+         * @param {string} identifier The identifier for this function
          * @memberof Augmented.Presentation.Mediator
     	 */
-    	subscribeOnce: function(channel, subscription, context) {
-    	    this.subscribe(channel, subscription, context, true);
+    	subscribeOnce: function(channel, subscription, context, identifier) {
+    	    this.subscribe(channel, subscription, context, true, identifier);
     	},
 
     	/**
@@ -374,7 +445,17 @@
     	 */
     	getDefaultChannel: function() {
     	    return this.channels[this.defaultChannel];
-    	}
+    	},
+
+        /**
+    	 * Get the default identifer
+         * @method getDefaultIdentifier
+         * @memberof Augmented.Presentation.Mediator
+         * @returns {string} Returns the default identifer
+    	 */
+        getDefaultIdentifier: function() {
+            return this.defaultIdentifier;
+        }
     });
 
     /**
@@ -2001,14 +2082,105 @@
         localStorage: true
     });
 
+    /**
+     * DOM related functions
+     * @namespace Dom
+     * @memberof Augmented.Presentation
+     */
     Augmented.Presentation.Dom = {
-        setValue: function(el, value) {
-            if (el.nodeType === 1) {
-                if (el.nodeName === "input" || el.nodeName === "INPUT" || el.nodeName === "textarea" || el.nodeName === "TEXTAREA") {
-                    el.value = value;
-                } else {
-                    el.innerHTML = value;
+        /**
+         * Sets the value of an element<br/>
+         * Will detect the correct method to do so by element type
+         * @method setValue
+         * @param {Element} el Element or string of element selector
+         * @param {string} value Value to set (or HTML)
+         * @param {boolean} onlyText Value will set as text only
+         * @memberof Augmented.Presentation.Dom
+         */
+        setValue: function(el, value, onlyText) {
+            if (el && value) {
+                var myEl = this.selector(el);
+
+                if (myEl && (myEl.nodeType === 1) &&
+                        (myEl.nodeName === "input" || myEl.nodeName === "INPUT" || myEl.nodeName === "textarea" || myEl.nodeName === "TEXTAREA")) {
+                    myEl.value = value;
+                } else if (myEl && (myEl.nodeType === 1)) {
+                    if (onlyText){
+                        myEl.innerText = value;
+                    } else {
+                        myEl.innerHTML = value;
+                    }
                 }
+            }
+        },
+        /**
+         * Gets the value of an element<br/>
+         * Will detect the correct method to do so by element type
+         * @method getValue
+         * @param {Element} el Element or string of element selector
+         * @returns {string} Returns the value of the element (or HTML)
+         * @memberof Augmented.Presentation.Dom
+         */
+        getValue: function(el) {
+            if (el) {
+                var myEl = this.selector(el);
+
+                if (myEl && (myEl.nodeType === 1) &&
+                        (myEl.nodeName === "input" || myEl.nodeName === "INPUT" || myEl.nodeName === "textarea" || myEl.nodeName === "TEXTAREA")) {
+                    return myEl.value;
+                } else if (myEl && (myEl.nodeType === 1)) {
+                    return myEl.innerHTML;
+                }
+            }
+            return null;
+        },
+        /**
+         * Selector function<br/>
+         * Supports full query selection
+         * @method selector
+         * @param {string} query Element or string of element selector
+         * @returns {Element} Returns the element (or first of type)
+         * @memberof Augmented.Presentation.Dom
+         */
+        selector: function(query) {
+            return Augmented.isString(query) ? document.querySelector(query) : query;
+        },
+        /**
+         * Selectors function<br/>
+         * Supports full query selection
+         * @method selectors
+         * @param {string} query Element or string of element selector
+         * @returns {NodeList} Returns all the nodes selected
+         * @memberof Augmented.Presentation.Dom
+         */
+        selectors: function(query) {
+            return Augmented.isString(query) ? document.querySelectorAll(query) : query;
+        },
+        /**
+         * Hides an element
+         * @method hide
+         * @param {Element} el Element or string of element selector
+         * @memberof Augmented.Presentation.Dom
+         */
+        hide: function(el) {
+            var myEl = this.selector(el);
+            if (myEl) {
+                myEl.style.display = "none";
+                myEl.style.visibility = "hidden";
+            }
+        },
+        /**
+         * Shows an element
+         * @method show
+         * @param {Element} el Element or string of element selector
+         * @param {string} display Value to set for 'display' property (optional)
+         * @memberof Augmented.Presentation.Dom
+         */
+        show: function(el, display) {
+            var myEl = this.selector(el);
+            if (myEl) {
+                myEl.style.display = (display) ? display : "block";
+                myEl.style.visibility = "visible";
             }
         }
     };
@@ -2022,7 +2194,7 @@
      * Augmented.Presentation.DecoratorView<br/>
      * An MVVM view designed around decorating the DOM with bindings.
      * This concept is designed to decouple the view from the backend contract.
-     * Although this is acheaved via views in general, the idea is:<br/>
+     * Although this is achieved via views in general, the idea is:<br/>
      * <blockquote>As a Javascript Developer, I'd like the ability to decorate HTML and control view rendering without the use of CSS selectors</blockquote>
      * <em>Important to note: This view <strong>gives up</strong> it's template and events!
      * This is because all events and templates are used on the DOM directly.</em><br/>
@@ -2073,13 +2245,14 @@
          * @private
          */
         _executeFunctionByName: function(functionName, context /*, args */) {
-            var args = Array.prototype.slice.call(arguments, 2);
+            /*var args = Array.prototype.slice.call(arguments, 2);
             var namespaces = functionName.split(".");
             var func = namespaces.pop();
             for (var i = 0; i < namespaces.length; i++) {
                 context = context[namespaces[i]];
             }
-            return context[func].apply(context, args);
+            return context[func].apply(context, args);*/
+            return Augmented.exec(functionName, context, arguments);
         },
         /**
          * bindingAttribute method - Returns the binging data attribute name
