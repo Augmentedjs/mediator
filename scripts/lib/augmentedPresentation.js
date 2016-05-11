@@ -74,111 +74,18 @@
      * @extends Augmented.View
      */
     var abstractColleague = Augmented.Presentation.Colleague = Augmented.View.extend({
-        mediator: null,
-    	/**
-    	 * Extend delegateEvents() to set subscriptions
-         * @method delegateEvents
-         * @memberof Augmented.Presentation.Colleague
-    	 */
-    	delegateEvents: function() {
-    	    delegateEvents.apply(this, arguments);
-    	    this.setSubscriptions();
-    	},
-
-    	/**
-    	 * Extend undelegateEvents() to unset subscriptions
-         * @method undelegateEvents
-         * @memberof Augmented.Presentation.Colleague
-    	 */
-    	undelegateEvents: function() {
-    	    undelegateEvents.apply(this, arguments);
-    	    this.unsetSubscriptions();
-    	},
-
-    	/**
-        * @property {Object} List of subscriptions, to be defined
-        * @memberof Augmented.Presentation.Colleague
-        * @private
-        */
-    	subscriptions: {},
-
-        /**
-    	 * Gets all subscriptions
-         * @method getSubscriptions
-         * @memberof Augmented.Presentation.Colleague
-         * @returns {object} Returns all subscriptions
-    	 */
-        getSubscriptions: function() {
-            return this.subscriptions;
-        },
-
-    	/**
-    	 * Subscribe to each subscription
-         * @method setSubscriptions
-    	 * @param {Object} [subscriptions] An optional hash of subscription to add
-         * @memberof Augmented.Presentation.Colleague
-    	 */
-    	setSubscriptions: function(subscriptions) {
-    	    if (subscriptions) {
-    		    Augmented.Utility.extend(this.subscriptions || {}, subscriptions);
-    	    }
-    	    subscriptions = subscriptions || this.subscriptions;
-    	    if (!subscriptions || (subscriptions.length === 0)) {
-    		    return;
-    	    }
-    	    // Just to be sure we don't set duplicate
-    	    this.unsetSubscriptions(subscriptions);
-
-            var i = 0, l = subscriptions.length;
-            for (i = 0; i < l; i++) {
-                var subscription = subscriptions[i];
-                var once = false;
-                if (subscription.$once) {
-                    subscription = subscription.$once;
-                    once = true;
-                }
-                if (typeof subscription === 'string') {
-                    subscription = this[subscription];
-                }
-                this.subscribe(subscription.channel, subscription, this, once);
-            }
-    	},
-
-    	/**
-    	 * Unsubscribe to each subscription
-         * @method unsetSubscriptions
-    	 * @param {Object} [subscriptions] An optional hash of subscription to remove
-         * @memberof Augmented.Presentation.Colleague
-    	 */
-    	unsetSubscriptions: function(subscriptions) {
-    	    subscriptions = subscriptions || this.subscriptions;
-    	    if (!subscriptions || (subscriptions.length === 0)) {
-    		    return;
-    	    }
-
-            var i = 0, l = subscriptions.length;
-            for (i = 0; i < l; i++) {
-                var subscription = subscriptions[i];
-                var once = false;
-                if (subscription.$once) {
-                    subscription = subscription.$once;
-                    once = true;
-                }
-                if (typeof subscription == 'string') {
-                    subscription = this[subscription];
-                }
-                this.unsubscribe(subscription.channel, subscription.$once || subscription, this);
-            }
-    	},
+        _mediator: null,
 
         sendMessage: function(message, data) {
-            this.mediator.trigger(message, data);
+            this._mediator.trigger(message, data);
         },
+
         setMediatorMessageQueue: function(e) {
-            this.mediator = e;
+            this._mediator = e;
         },
+
         removeMediatorMessageQueue: function() {
-            this.mediator = null;
+            this._mediator = null;
         }
     });
 
@@ -203,7 +110,7 @@
          * @memberof Augmented.Presentation.Mediator
          * @private
          */
-    	defaultChannel: "augmentedChannel",
+    	_defaultChannel: "augmentedChannel",
 
         /**
          * Default identifer Property
@@ -211,7 +118,7 @@
          * @memberof Augmented.Presentation.Mediator
          * @private
          */
-        defaultIdentifier: "augmentedIdentifier",
+        _defaultIdentifier: "augmentedIdentifier",
 
         /**
          * Channels Property
@@ -219,7 +126,104 @@
          * @memberof Augmented.Presentation.Mediator
          * @private
          */
-        channels: {},
+        _channels: {},
+
+        /**
+        * @property {Object} List of subscriptions, to be defined
+        * @memberof Augmented.Presentation.Colleague
+        * @private
+        */
+        _subscriptions: {},
+
+
+        /**
+         * Extend delegateEvents() to set subscriptions
+         * @method delegateEvents
+         * @memberof Augmented.Presentation.Colleague
+         */
+        delegateEvents: function() {
+            delegateEvents.apply(this, arguments);
+            this.setSubscriptions();
+        },
+
+        /**
+         * Extend undelegateEvents() to unset subscriptions
+         * @method undelegateEvents
+         * @memberof Augmented.Presentation.Colleague
+         */
+        undelegateEvents: function() {
+            undelegateEvents.apply(this, arguments);
+            this.unsetSubscriptions();
+        },
+
+        /**
+         * Gets all subscriptions
+         * @method getSubscriptions
+         * @memberof Augmented.Presentation.Colleague
+         * @returns {object} Returns all subscriptions
+         */
+        getSubscriptions: function() {
+            return this._subscriptions;
+        },
+
+        /**
+         * Subscribe to each subscription
+         * @method setSubscriptions
+         * @param {Object} [subscriptions] An optional hash of subscription to add
+         * @memberof Augmented.Presentation.Colleague
+         */
+        setSubscriptions: function(subscriptions) {
+            if (subscriptions) {
+                Augmented.Utility.extend(this._subscriptions || {}, subscriptions);
+            }
+            subscriptions = subscriptions || this._subscriptions;
+            if (!subscriptions || (subscriptions.length === 0)) {
+                return;
+            }
+            // Just to be sure we don't set duplicate
+            this.unsetSubscriptions(subscriptions);
+
+            var i = 0, l = subscriptions.length;
+            for (i = 0; i < l; i++) {
+                var subscription = subscriptions[i];
+                var once = false;
+                if (subscription.$once) {
+                    subscription = subscription.$once;
+                    once = true;
+                }
+                if (typeof subscription === 'string') {
+                    subscription = this[subscription];
+                }
+                this.subscribe(subscription.channel, subscription, this, once);
+            }
+        },
+
+        /**
+         * Unsubscribe to each subscription
+         * @method unsetSubscriptions
+         * @param {Object} [subscriptions] An optional hash of subscription to remove
+         * @memberof Augmented.Presentation.Colleague
+         */
+        unsetSubscriptions: function(subscriptions) {
+            subscriptions = subscriptions || this._subscriptions;
+            if (!subscriptions || (subscriptions.length === 0)) {
+                return;
+            }
+
+            var i = 0, l = subscriptions.length;
+            for (i = 0; i < l; i++) {
+                var subscription = subscriptions[i];
+                var once = false;
+                if (subscription.$once) {
+                    subscription = subscription.$once;
+                    once = true;
+                }
+                if (typeof subscription == 'string') {
+                    subscription = this[subscription];
+                }
+                this.unsubscribe(subscription.channel, subscription.$once || subscription, this);
+            }
+        },
 
     	/**
     	 * Observe a Colleague View - observe a Colleague and add to a channel
@@ -233,11 +237,11 @@
     	observeColleague: function(colleague, callback, channel, identifier) {
     	    if (colleague instanceof Augmented.Presentation.Colleague) {
         		if (!channel) {
-        		    channel = this.defaultChannel;
+        		    channel = this._defaultChannel;
         		}
                 colleague.setMediatorMessageQueue(this);
 
-        		this.subscribe(channel, callback, colleague, false, (identifier) ? identifier : this.defaultIdentifier);
+        		this.subscribe(channel, callback, colleague, false, (identifier) ? identifier : this._defaultIdentifier);
     	    }
     	},
 
@@ -256,7 +260,7 @@
                     colleague.trigger(arguments[0], arguments[1]);
                 },
                 channel,
-                (identifier) ? identifier : this.defaultIdentifier
+                (identifier) ? identifier : this._defaultIdentifier
             );
         },
 
@@ -272,10 +276,10 @@
     	dismissColleague: function(colleague, callback, channel, identifier) {
     	    if (colleague instanceof Augmented.Presentation.Colleague) {
         		if (!channel) {
-        		    channel = this.defaultChannel;
+        		    channel = this._defaultChannel;
         		}
                 colleague.removeMediatorMessageQueue();
-        		this.unsubscribe(channel, callback, colleague, (identifier) ? identifier : this.defaultIdentifier);
+        		this.unsubscribe(channel, callback, colleague, (identifier) ? identifier : this._defaultIdentifier);
     	    }
     	},
 
@@ -288,7 +292,7 @@
          * @memberof Augmented.Presentation.Mediator
     	 */
         dismissColleagueTrigger: function(colleague, channel, identifier) {
-            var id = (identifier) ? identifier : this.defaultIdentifier;
+            var id = (identifier) ? identifier : this._defaultIdentifier;
             this.dismissColleague(
                 colleague,
                 function() {
@@ -310,14 +314,14 @@
          * @memberof Augmented.Presentation.Mediator
     	 */
     	subscribe: function(channel, callback, context, once, identifier) {
-    	    if (!this.channels[channel]) {
-        		this.channels[channel] = [];
+    	    if (!this._channels[channel]) {
+        		this._channels[channel] = [];
             }
-        	this.channels[channel].push({
+        	this._channels[channel].push({
         		fn: callback,
         		context: context || this,
         		once: once,
-                identifier: (identifier) ? identifier : this.defaultIdentifier
+                identifier: (identifier) ? identifier : this._defaultIdentifier
     	    });
 
             this.on(channel, this.publish, context);
@@ -331,15 +335,15 @@
          * @memberof Augmented.Presentation.Mediator
     	 */
     	publish: function(channel) {
-    	    if (!this.channels[channel]) {
+    	    if (!this._channels[channel]) {
     		    return;
             }
 
     	    var args = [].slice.call(arguments, 1), subscription;
-            var i = 0, l = this.channels[channel].length;
+            var i = 0, l = this._channels[channel].length;
 
     	    for (i = 0; i < l; i++) {
-        		subscription = this.channels[channel][i];
+        		subscription = this._channels[channel][i];
                 if (subscription) {
                     if (subscription.fn) {
             		    subscription.fn.apply(subscription.context, args);
@@ -364,25 +368,25 @@
          * @memberof Augmented.Presentation.Mediator
     	 */
     	unsubscribe: function(channel, callback, context, identifier) {
-    	    if (!this.channels[channel]) {
+    	    if (!this._channels[channel]) {
     		    return;
     	    }
 
-            var id = (identifier) ? identifier : this.defaultIdentifier;
+            var id = (identifier) ? identifier : this._defaultIdentifier;
 
-    	    var subscription, i = 0, l = this.channels[channel].length;
-    	    for (i = 0; i < l; i++) {
-                subscription = this.channels[channel][i];
+    	    var subscription, i = 0;
+    	    for (i = 0; i < this._channels[channel].length; i++) {
+                subscription = this._channels[channel][i];
                 if (subscription) {
                     if (subscription.identifier === id && subscription.context === context) {
                     // originally compared function callbacks, but wwe don't alsways pass one so use identifier
             		//if (subscription.fn === callback && subscription.context === context) {
-            		    this.channels[channel].splice(i, 1);
+            		    this._channels[channel].splice(i, 1);
             		    i--;
             		}
                 } else {
                     logger.warn("AUGMENTED: Mediator: No subscription for channel '" + channel + "' on row " + i);
-                    logger.debug("AUGMENTED: Mediator: subscription " + this.channels[channel]);
+                    logger.debug("AUGMENTED: Mediator: subscription " + this._channels[channel]);
                 }
     	    }
     	},
@@ -419,7 +423,7 @@
          * @returns {object} Returns all the channels
     	 */
     	getChannels: function() {
-    	    return this.channels;
+    	    return this._channels;
     	},
 
     	/**
@@ -431,9 +435,9 @@
     	 */
     	getChannel: function(channel) {
     	    if (!channel) {
-    		    channel = this.defaultChannel;
+    		    channel = this._defaultChannel;
     	    }
-    	    return this.channels[channel];
+    	    return this._channels[channel];
     	},
 
     	/**
@@ -444,7 +448,7 @@
          * @returns {array} Returns the default channel
     	 */
     	getDefaultChannel: function() {
-    	    return this.channels[this.defaultChannel];
+    	    return this._channels[this._defaultChannel];
     	},
 
         /**
@@ -454,7 +458,7 @@
          * @returns {string} Returns the default identifer
     	 */
         getDefaultIdentifier: function() {
-            return this.defaultIdentifier;
+            return this._defaultIdentifier;
         }
     });
 
@@ -2083,11 +2087,23 @@
     });
 
     /**
+     * DOM related functions - Same as Augmented.Presentation.Dom
+     * @namespace D
+     * @memberof Augmented
+     */
+
+    /**
      * DOM related functions
      * @namespace Dom
      * @memberof Augmented.Presentation
      */
-    Augmented.Presentation.Dom = {
+    Augmented.D = Augmented.Presentation.Dom = {
+        getViewportHeight: function() {
+            return window.innerHeight;
+        },
+        getViewportWidth: function() {
+            return window.innerWidth;
+        },
         /**
          * Sets the value of an element<br/>
          * Will detect the correct method to do so by element type
@@ -2098,11 +2114,15 @@
          * @memberof Augmented.Presentation.Dom
          */
         setValue: function(el, value, onlyText) {
-            if (el && value) {
+            if (el) {
+                value = (value) ? value : "";
                 var myEl = this.selector(el);
 
                 if (myEl && (myEl.nodeType === 1) &&
-                        (myEl.nodeName === "input" || myEl.nodeName === "INPUT" || myEl.nodeName === "textarea" || myEl.nodeName === "TEXTAREA")) {
+                        (myEl.nodeName === "input" || myEl.nodeName === "INPUT" ||
+                         myEl.nodeName === "textarea" || myEl.nodeName === "TEXTAREA" ||
+                         myEl.nodeName === "select" || myEl.nodeName === "SELECT")
+                    ) {
                     myEl.value = value;
                 } else if (myEl && (myEl.nodeType === 1)) {
                     if (onlyText){
@@ -2126,7 +2146,9 @@
                 var myEl = this.selector(el);
 
                 if (myEl && (myEl.nodeType === 1) &&
-                        (myEl.nodeName === "input" || myEl.nodeName === "INPUT" || myEl.nodeName === "textarea" || myEl.nodeName === "TEXTAREA")) {
+                        (myEl.nodeName === "input" || myEl.nodeName === "INPUT" ||
+                        myEl.nodeName === "textarea" || myEl.nodeName === "TEXTAREA" ||
+                        myEl.nodeName === "select" || myEl.nodeName === "SELECT")) {
                     return myEl.value;
                 } else if (myEl && (myEl.nodeType === 1)) {
                     return myEl.innerHTML;
@@ -2143,7 +2165,10 @@
          * @memberof Augmented.Presentation.Dom
          */
         selector: function(query) {
-            return Augmented.isString(query) ? document.querySelector(query) : query;
+            if (query) {
+                return Augmented.isString(query) ? document.querySelector(query) : query;
+            }
+            return null;
         },
         /**
          * Selectors function<br/>
@@ -2154,7 +2179,10 @@
          * @memberof Augmented.Presentation.Dom
          */
         selectors: function(query) {
-            return Augmented.isString(query) ? document.querySelectorAll(query) : query;
+            if (query) {
+                return Augmented.isString(query) ? document.querySelectorAll(query) : query;
+            }
+            return null;
         },
         /**
          * Hides an element
@@ -2182,12 +2210,99 @@
                 myEl.style.display = (display) ? display : "block";
                 myEl.style.visibility = "visible";
             }
+        },
+        setClass: function(el, cls) {
+            var myEl = this.selector(el);
+            if (myEl) {
+                myEl.setAttribute("class", cls);
+            }
+        },
+        addClass: function(el, cls) {
+            var myEl = this.selector(el);
+            if (myEl) {
+                myEl.classList.add(cls);
+            }
+        },
+        removeClass: function(el, cls) {
+            var myEl = this.selector(el);
+            if (myEl) {
+                myEl.classList.remove(cls);
+            }
+        },
+        empty: function(el) {
+            this.setValue(el, "", true);
+        },
+        /**
+         * injectTemplate method - Injects a template element at a mount point
+         * @method injectTemplate
+         * @param {string} template The template selector
+         * @param {Element} mount The mount point as Document.Element or String
+         * @memberof Augmented.Presentation.Dom
+         */
+        injectTemplate: function(template, mount) {
+            var t = this.selector(template), el = this.selector(mount);
+            if (t && el) {
+                var clone = document.importNode(t.content, true);
+                el.appendChild(clone);
+            }
         }
     };
 
-    var decoratorEventAttributeEnum = {
-            "click": "data-click"
+    Augmented.Presentation.Widget = {
+        List: function(data, ordered) {
+            var list = (ordered) ? document.createElement("ol") : document.createElement("ul"), i = 0, l, li, t, d;
+            if (data && Array.isArray(data)) {
+                l = data.length;
+                for (i = 0; i < l; i++) {
+                    li = document.createElement("li");
+                    li.setAttribute("data-index", i);
+                    t = document.createTextNode(String(data[i]));
+                    li.appendChild(t);
+                    list.appendChild(li);
+                }
+            }
+            return list;
+        },
+        DescriptionList: function(data) {
+            var list = document.createElement("dl"), i = 0, l, dd, dt, t, keys, key;
+            if (data && Augmented.isObject(data)) {
+                keys = Object.keys(data);
+                l = keys.length;
+                for (i = 0; i < l; i++) {
+                    dt = document.createElement("dt");
+                    t = document.createTextNode(String(keys[i]));
+                    dt.appendChild(t);
+                    list.appendChild(dt);
 
+                    key = data[keys[i]];
+                    dd = document.createElement("dd");
+                    t = document.createTextNode(String(key));
+                    dd.appendChild(t);
+                    list.appendChild(dd);
+                }
+            }
+            return list;
+        },
+        DataList: function(id, data) {
+            var list = document.createElement("datalist"), i = 0, l, o;
+            list.setAttribute("id", id);
+            if (data && Array.isArray(data)) {
+                l = data.length;
+                for (i = 0; i < l; i++) {
+                    o = document.createElement("option");
+                    o.value = String(data[i]);
+                    list.appendChild(o);
+                }
+            }
+            return list;
+        }
+    };
+
+    var decoratorAttributeEnum = {
+            "click": "data-click",
+            "func": "data-function",
+            "style": "data-style",
+            "appendTemplate": "data-append-template"
     };
 
     /**
@@ -2213,21 +2328,39 @@
                 _events["change input[" + this.bindingAttribute() + "]"] = "changed";
                 _events["change textarea[" + this.bindingAttribute() + "]"] = "changed";
                 _events["change select[" + this.bindingAttribute() + "]"] = "changed";
-                _events["click button[" + this.bindingAttribute() + "]"] = "click";
+                //_events["click button[" + this.bindingAttribute() + "]"] = "click";
+                // regular elements with click bindings
+                _events["click *[" + this.bindingAttribute() + "][" + decoratorAttributeEnum.click + "]"] = "click";
+
             }
             return _events;
         },
         changed: function(event) {
-            this.model.set(event.currentTarget.name, event.currentTarget.value);
-            //logger.debug("AUGMENTED: DecoratorView updated Model: " + JSON.stringify(this.model.toJSON()));
+            var key = event.currentTarget.getAttribute(this.bindingAttribute());
+            var val = event.currentTarget.value;
+            if(event.currentTarget.type === "checkbox") {
+                val = (event.currentTarget.checked) ? true : false;
+            }
+            this.model.set(( (key) ? key : event.currentTarget.name ), val);
+            this.func(event);
+            logger.debug("AUGMENTED: DecoratorView updated Model: " + JSON.stringify(this.model.toJSON()));
         },
         click: function(event) {
-            var func = event.currentTarget.getAttribute(decoratorEventAttributeEnum.click);
+            var func = event.currentTarget.getAttribute(decoratorAttributeEnum.click);
             if (func && this[func]) {
                 this._executeFunctionByName(func, this, event);
-            } else {
+            }/* else {
                 logger.debug("AUGMENTED: DecoratorView No function bound or no function exists! " + func);
-            }
+            }*/
+            this.func(event);
+        },
+        func: function(event) {
+            var func = event.currentTarget.getAttribute(decoratorAttributeEnum.func);
+            if (func && this[func]) {
+                this._executeFunctionByName(func, this, event);
+            } /*else {
+                logger.debug("AUGMENTED: DecoratorView No function bound or no function exists! " + func);
+            }*/
         },
         /**
          * Initialize method - Do Not Override
@@ -2235,9 +2368,21 @@
          */
         initialize: function(options) {
             this.init(options);
+
             if (!this.model) {
                 this.model = new Augmented.Model();
             }
+        },
+        /**
+         * Remove method - Does not remove DOM elements only bindings.
+         * @method remove
+         */
+        remove: function() {
+            /* off to unbind the events */
+            this.off();
+            //this.off(this.el);
+            this.stopListening();
+            return this;
         },
         /**
          * _executeFunctionByName method - Private
@@ -2245,14 +2390,14 @@
          * @private
          */
         _executeFunctionByName: function(functionName, context /*, args */) {
-            /*var args = Array.prototype.slice.call(arguments, 2);
+            var args = Array.prototype.slice.call(arguments, 2);
             var namespaces = functionName.split(".");
             var func = namespaces.pop();
             for (var i = 0; i < namespaces.length; i++) {
                 context = context[namespaces[i]];
             }
-            return context[func].apply(context, args);*/
-            return Augmented.exec(functionName, context, arguments);
+            return context[func].apply(context, args);
+            //return Augmented.exec(arguments);
         },
         /**
          * bindingAttribute method - Returns the binging data attribute name
@@ -2266,10 +2411,10 @@
          * injectTemplate method - Injects a template at a mount point
          * @method injectTemplate
          * @param {string} template The template to inject
-         * @param {Element} mount The mouse point as Document.Element or String
+         * @param {Element} mount The mount point as Document.Element or String
          */
         injectTemplate: function(template, mount) {
-            var domInject = false, m = mount;
+            var m = mount;
             if (!mount) {
                 mount = this.el;
             }
@@ -2278,33 +2423,35 @@
             }
             if (Augmented.isString(template)) {
                 // html
-                domInject = false;
-
-            } else if (template.nodeType > 0) {
-                // DOM
-                domInject = true;
-            }
-
-            if (domInject) {
-                mount.appendChild(template);
-            } else {
                 var currentHTML = mount.innerHTML;
                 mount.innerHTML = currentHTML + template;
+            } else if ((template.nodeType && template.nodeName) &&
+                template.nodeType > 0 && !(template.nodeName === "template" || template.nodeName === "TEMPLATE")) {
+                // DOM
+                mount.appendChild(template);
+            } else if (template instanceof DocumentFragment  || template.nodeName === "template" || template.nodeName === "TEMPLATE") {
+                // Document Fragment
+                Augmented.Presentation.Dom.injectTemplate(template, mount);
             }
             this.delegateEvents();
         },
         /**
          * removeTemplate method - Removes a template (children) at a mount point
          * @method removeTemplate
-         * @param {Element} mount The mouse point as Document.Element or String
+         * @param {Element} mount The mount point as Document.Element or String
+         * @param {boolean} onlyContent Only remove the content not the mount point
          */
-        removeTemplate: function(mount) {
-            while (mount.firstChild) {
-                mount.removeChild(mount.firstChild);
-            }
-            var p = mount.parentNode;
-            if (p) {
-                p.removeChild(mount);
+        removeTemplate: function(mount, onlyContent) {
+            if (mount) {
+                while (mount.firstChild) {
+                    mount.removeChild(mount.firstChild);
+                }
+                if (!onlyContent) {
+                    var p = mount.parentNode;
+                    if (p) {
+                        p.removeChild(mount);
+                    }
+                }
                 this.delegateEvents();
             }
         },
@@ -2323,7 +2470,32 @@
             return null;
         },
         /**
-         * bindModelChange method - binds the model changes to elements
+         * syncBoundElement - Syncs the data of a bound element by firing a change event
+         * @method syncBoundElement
+         * @param {string} id The identifier (not id attribute) of the element
+         */
+        syncBoundElement: function(id) {
+            if (id) {
+                var event = new UIEvent("change", {
+                    "view": window,
+                    "bubbles": true,
+                    "cancelable": true
+                }), sel = this.boundElement(id);
+                if (sel) {
+                    sel.dispatchEvent(event);
+                }
+            }
+        },
+        addClass: function(id, cls) {
+            var myEl = this.boundElement(id);
+            myEl.classList.add(cls);
+        },
+        removeClass: function(id, cls) {
+            var myEl = this.boundElement(id);
+            myEl.classList.remove(cls);
+        },
+        /**
+         * bindModelChange method - binds the model changes to functions
          * @method bindModelChange
          * @param {func} func The function to call when changing (normally render)
          */
@@ -2342,7 +2514,11 @@
             if (!this.model) {
                 this.model = new Augmented.Model();
             }
-            this.model.on('change:' + element, this._syncData.bind(this, element), this);
+            if (element) {
+                this.model.on('change:' + element, this._syncData.bind(this, element), this);
+            } else {
+                this.model.on('change', this._syncAllData.bind(this, element), this);
+            }
         },
         /**
          * _syncData method - syncs the model changes to a specified bound element
@@ -2353,8 +2529,60 @@
         _syncData: function(element) {
             var e = this.boundElement(element);
             if (e) {
-                var d = this.model.get(element);
-                Augmented.Presentation.Dom.setValue(e, ((d) ? d : ""));
+                var d = this.model.get(element),
+                renderStyle = e.getAttribute(decoratorAttributeEnum.style),
+                prependTemplate = e.getAttribute(decoratorAttributeEnum.prependTemplate),
+                appendTemplate = e.getAttribute(decoratorAttributeEnum.appendTemplate),
+                mount, template;
+
+                if (prependTemplate) {
+                    mount = document.createElement("div");
+                    template = Augmented.Presentation.Dom.selector("#" + prependTemplate);
+                    e.appendChild(mount);
+                    this.injectTemplate(template, mount);
+                }
+
+                if (renderStyle) {
+                    var ee,
+                    prependTemplateEach = e.getAttribute(decoratorAttributeEnum.prependTemplateEach),
+                    appendTemplateEach = e.getAttribute(decoratorAttributeEnum.appendTemplateEach),
+                    pEach = prependTemplateEach ? prependTemplateEach : null,
+                    aEach = appendTemplateEach ? appendTemplateEach : null;
+
+                    if (renderStyle === "list" || renderStyle === "unordered-list") {
+                        ee = Augmented.Presentation.Widget.List(d, false);
+                        Augmented.Presentation.Dom.empty(e);
+                        e.appendChild(ee);
+                    } else if (renderStyle === "ordered-list") {
+                        ee = Augmented.Presentation.Widget.List(d, true);
+                        Augmented.Presentation.Dom.empty(e);
+                        e.appendChild(ee);
+                    } else if (renderStyle === "description-list") {
+                        ee = Augmented.Presentation.Widget.DescriptionList(d);
+                        Augmented.Presentation.Dom.empty(e);
+                        e.appendChild(ee);
+                    }
+                } else {
+                    Augmented.Presentation.Dom.setValue(e, ((d) ? d : ""));
+                }
+
+                if (appendTemplate) {
+                    mount = document.createElement("div");
+                    template = Augmented.Presentation.Dom.selector("#" + appendTemplate);
+                    e.appendChild(mount);
+
+                    this.injectTemplate(template, mount);
+                }
+            }
+        },
+        _syncAllData: function() {
+            // get all model properties
+            var attr = this.model.attributes;
+            if (attr) {
+                var i = 0, keys = Object.keys(attr), l = keys.length;
+                for (i = 0; i < l; i++) {
+                    this._syncData(keys[i]);
+                }
             }
         },
         /**
@@ -2373,6 +2601,87 @@
         unbindModelSync: function(element) {
             this.model.unBind('change:' + element, this._syncData, this);
         }
+    });
+
+    Augmented.Presentation.ViewController = Augmented.Object.extend({
+        _views: [],
+        initialize: function() {},
+        render: function() {},
+        remove: function() {},
+        manageView: function(view) {
+            this._views.push(view);
+        },
+        removeAllViews: function() {
+            var i = 0, l = this._views.length;
+            for (i = 0; i < l; i++) {
+                this._views[i].remove();
+            }
+            this._views = [];
+        },
+        getViews: function () {
+            return this._views;
+        }
+    });
+
+    // dialog
+    Augmented.Presentation.DialogView = Augmented.Presentation.DecoratorView.extend({
+        name: "dialog",
+        title: "",
+        body: "",
+        style: "form",
+        buttons: {
+            //name : callback
+        },
+
+        template: function() {
+            return "<div class=\"blur\"><dialog class=\"" + this.style + "\"><h1>" + this.title + "</h1>" + this.body + this._getButtonGroup() + "</dialog></div>";
+        },
+        setBody: function(body) {
+            this.body = body;
+        },
+        _getButtonGroup: function() {
+            var html = "<div class=\"buttonGroup\">", i = 0, keys = Object.keys(this.buttons), l = (keys) ? keys.length: 0;
+
+            for (i = 0; i < l; i++) {
+                html = html + "<button data-" + this.name + "=\"" + this.buttons[keys[i]] + "\"data-click=\"" + this.buttons[keys[i]] + "\">" + keys[i] + "</button>";
+            }
+
+            return html + "</div>";
+        },
+        render: function() {
+            Augmented.Presentation.Dom.setValue(this.el, this.template());
+            this.delegateEvents();
+            this.trigger("open");
+            return this;
+        },
+        // built-in callbacks
+        cancel: function(event) {
+            this.close();
+        },
+        open: function() {
+            this.render();
+        },
+        close: function() {
+            this.trigger("close");
+            Augmented.Presentation.Dom.empty(this.el, true);
+        }
+    });
+
+    Augmented.Presentation.ConfirmationDialogView = Augmented.Presentation.DialogView.extend({
+        buttons: {
+            //name : callback
+            "yes": "yes",
+            "no": "no"
+        },
+        style: "alert"
+    });
+
+    Augmented.Presentation.AlertDialogView = Augmented.Presentation.DialogView.extend({
+        buttons: {
+            //name : callback
+            "cancel": "cancel"
+        },
+        style: "alert"
     });
 
     return Augmented.Presentation;

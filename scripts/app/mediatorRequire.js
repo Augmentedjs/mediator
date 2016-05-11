@@ -2,7 +2,7 @@ require.config({
 	'baseUrl': 'scripts/',
 
     'paths': {
-		'jquery': 'lib/jquery-2.1.4.min',
+		'jquery': 'lib/jquery.min',
 		'underscore': 'lib/lodash.min',
 		'backbone': 'lib/backbone-min',
 
@@ -21,7 +21,7 @@ require.config({
     'shim': {
         'identicon': {
             deps: ['pnglib']
-        },
+        }
     }
 });
 
@@ -72,7 +72,6 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
     ];
 
     var app = new Augmented.Presentation.Application("Visual Mediator");
-    //app.registerStylesheet("styles/main.css");
     app.registerStylesheet("https://fonts.googleapis.com/css?family=Work+Sans:300,400");
     app.registerStylesheet("https://fonts.googleapis.com/css?family=Roboto:100,400");
     app.start();
@@ -273,10 +272,8 @@ require(['augmented', 'augmentedPresentation', 'identicon'], function(Augmented,
 
     medView.render();
 
-
     col1.render();
     col2.render();
     col3.render();
     cpView.render();
-
 });
